@@ -1,0 +1,10 @@
+.vscode/
+release/
+build/
+.xmake/
+.cache/
+compile_commands.json
+core
+public/
+gallery
+.filecount

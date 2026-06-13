@@ -1,0 +1,67 @@
+name: build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Enter version'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+
+    steps:
+      - name: Getting GITHUB_SHA_SHORT
+        shell: bash
+        run: |
+          echo "GITHUB_SHA_SHORT=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Getting xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+          
+      - name: Getting own repository
+        uses: actions/checkout@v6
+        with:
+          path: src
+
+      - name: Compile 
+        working-directory: src
+        run: |
+          xmake f -c
+          xmake -rv gallery
+          chmod +x release/gallery
+          release/gallery -src=testdir/photos -out=testdir/public -maxw=1800
+          rm -rf testdir/public/_src 
+          cp -r testdir/photos testdir/public/_src
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: 'zip'
+          directory: src/release
+          filename: "../gallery-${{ env.GITHUB_SHA_SHORT }}.zip"
+          
+      - name: Uploading package
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.version }}
+          files: src/gallery-${{ env.GITHUB_SHA_SHORT }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: src/testdir/public
+
