@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }}</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <nav class="navbar">
+      <a href="/index.html">Gallery</a>
+## for crumb in navbar
+      <span class="sep">/</span>
+      <a href="{{ crumb.url }}">{{ crumb.name }}</a>
+## endfor
+    </nav>
+    <h1>{{ title }}</h1>
+  </header>
+  <main>
+    <ul class="entry-list">
+## for entry in albums
+      <li class="entry-item">
+        <a href="{{ entry.url }}">
+          <div class="entry-thumb">
+            <span class="folder-icon">&#128193;</span>
+          </div>
+          <span class="entry-name">{{ entry.name }}</span>
+          <span class="entry-count">{{ entry.count }} 张</span>
+        </a>
+      </li>
+## endfor
+    </ul>
+  </main>
+</body>
+</html>
