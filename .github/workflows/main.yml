@@ -38,8 +38,10 @@ jobs:
         run: |
           xmake f -c
           xmake -rv gallery
+
+          ## github-pages
           chmod +x release/gallery
-          release/gallery -src=testdir/photos -out=testdir/public -maxw=1800
+          release/gallery -src=testdir/photos -out=testdir/public -maxw=1800 -webroot=/gallery/
           rm -rf testdir/public/_src 
           cp -r testdir/photos testdir/public/_src
 

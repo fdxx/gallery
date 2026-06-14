@@ -102,7 +102,7 @@ public:
         std::size_t totalImgs;
     };
 
-    explicit GalleryGenerator(const fs::path &src, const jl::LayoutConfig &layout, const fs::path &out, const fs::path &assets)
+    explicit GalleryGenerator(const fs::path &src, const jl::LayoutConfig &layout, const fs::path &out, const fs::path &assets, const fs::path &webroot)
     {
         m_srcRoot = fs::absolute(src);
         m_outRoot = fs::absolute(out);
@@ -111,6 +111,7 @@ public:
         m_photoTemplate = m_assets / "templates" / "photo.html";
         m_sentinelFile = m_outRoot / ".gallery_sentine";
         m_srcLink = m_outRoot / "_src";
+        m_webRoot = webroot;
 
         m_LayoutCfg = layout;
         m_injaEnv.set_trim_blocks(true);
@@ -137,7 +138,8 @@ public:
         std::ofstream(m_sentinelFile).close();
         fs::create_symlink(m_srcRoot, m_srcLink);
         fs::copy(m_assets, m_outRoot, fs::copy_options::recursive);
-
+        fs::remove_all(m_outRoot / "templates");
+        
         DirNode rootNode = BuildTree(m_srcRoot);
         GenDir(rootNode);
         std::println("[end] GenSite done.");
@@ -207,17 +209,17 @@ private:
         json albums = json::array();
         for (const auto& sub : node.subdirs)
         {
-            auto subRel = fs::relative(sub.absPath, m_srcRoot);
             auto &e = albums.emplace_back();
             e["name"]  = sub.absPath.filename().string();
-            e["url"]   = "/" + (subRel / "index.html").generic_string();
+            e["url"]   = GetWebIndexPath(fs::relative(sub.absPath, m_srcRoot));
             e["count"] = sub.totalImgs;
         }
 
         auto rel = fs::relative(node.absPath, m_srcRoot);
         json data;
+        data["root"]    = m_webRoot.generic_string();
         data["title"]   = (rel.empty() || rel == ".") ? std::string("Photo Gallery") : node.absPath.filename().string();
-        data["albums"] = std::move(albums);
+        data["albums"]  = std::move(albums);
         data["navbar"]  = BuildNavbar(rel);
 
         fs::path out = m_outRoot / rel;
@@ -244,7 +246,8 @@ private:
         {
             const auto& box = layout.boxes[i];
             json &p = photos.emplace_back();
-            p["src"]    = GetWebPath(node.images[i].path);
+
+            p["src"]    = GetWebImgPath(fs::relative(node.images[i].path, m_srcRoot));
             p["name"]   = node.images[i].path.filename().string();
             p["top"]    = (int)std::round(box.top);
             p["left"]   = (int)std::round(box.left);
@@ -254,11 +257,13 @@ private:
 
         auto rel = fs::relative(node.absPath, m_srcRoot);
         json data;
-        data["title"]            = node.absPath.filename().string();
-        data["count"]            = node.totalImgs;
-        data["container_height"] = (int)std::ceil(layout.containerHeight);
-        data["photos"]           = std::move(photos);
-        data["navbar"]           = BuildNavbar(rel);
+        data["root"]       = m_webRoot.generic_string();
+        data["title"]      = node.absPath.filename().string();
+        data["count"]      = node.totalImgs;
+        data["containerW"] = (int)std::ceil(m_LayoutCfg.containerWidth);
+        data["containerH"] = (int)std::ceil(layout.containerHeight);
+        data["photos"]     = std::move(photos);
+        data["navbar"]     = BuildNavbar(rel);
 
         auto out = m_outRoot / rel;
         fs::create_directories(out);
@@ -276,7 +281,7 @@ private:
             acc /= part;
             auto &crumb = navbar.emplace_back();
             crumb["name"] = part.string();
-            crumb["url"]  = "/" + acc.generic_string() + "/index.html";
+            crumb["url"]  = GetWebIndexPath(acc);
         }
         return navbar;
     }
@@ -296,9 +301,16 @@ private:
         return imgs;
     }
 
-    std::string GetWebPath(const fs::path& absPath)
+    std::string GetWebImgPath(const fs::path& rel)
     {
-        return "/_src/" + fs::relative(absPath, m_srcRoot).generic_string();
+        fs::path path = m_webRoot / "_src" / rel;
+        return path.generic_string();
+    }
+
+    std::string GetWebIndexPath(const fs::path& rel)
+    {
+        fs::path path = m_webRoot / rel / "index.html";
+        return path.generic_string();
     }
 
     double GetImgRatio(const fs::path &path)
@@ -332,6 +344,7 @@ private:
     fs::path m_photoTemplate;
     fs::path m_sentinelFile;
     fs::path m_srcLink;
+    fs::path m_webRoot;
     
     jl::LayoutConfig m_LayoutCfg;
     inja::Environment m_injaEnv;
@@ -345,13 +358,14 @@ int main(int argc, char* argv[])
     ArgsParser args(argc, argv);
     if (!args.Has("-src") || !args.Has("-out"))
     {
-        std::println("Usage: {} -src=dir -out=dir [-update=0] [-maxw=1800] [-maxh=500] [-assets=assets]", args.GetCmdName());
+        std::println("Usage: {} -src=dir -out=dir [-update=0] [-maxw=1800] [-maxh=500] [-assets=assets] [-webroot=/]", args.GetCmdName());
         return 1;
     }
 
     fs::path srcRoot = args.Get<std::string>("-src");
     fs::path outRoot = args.Get<std::string>("-out");
     fs::path assets = args.Get<std::string>("-assets", ASSETSDIR);
+    fs::path webroot = args.Get<std::string>("-webroot", "/");
     int updateInterval = args.Get<int>("-update", 0);
 
     jl::LayoutConfig LayoutCfg;
@@ -364,7 +378,7 @@ int main(int argc, char* argv[])
     LayoutCfg.widowLayoutStyle          = jl::WidowLayoutStyle::Left;
 
     FileCounter fCounter(srcRoot);
-    GalleryGenerator Gallery(srcRoot, LayoutCfg, outRoot, assets);
+    GalleryGenerator Gallery(srcRoot, LayoutCfg, outRoot, assets, webroot);
 
     std::println("[start] photos={} output={} updateInterval={}(seconds)", srcRoot.c_str(), outRoot.c_str(), updateInterval);
     

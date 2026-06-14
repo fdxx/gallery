@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ title }}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.1.14/dist/fancybox/fancybox.css">
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="{{ root }}css/style.css">
 </head>
 <body>
   <header>
     <nav class="navbar">
-      <a href="/index.html">Gallery</a>
+      <a href="{{ root }}index.html">Gallery</a>
 ## for crumb in navbar
       <span class="sep">/</span>
       <a href="{{ crumb.url }}">{{ crumb.name }}</a>
@@ -20,7 +20,7 @@
     <span class="photo-count">{{ count }} 张照片</span>
   </header>
   <main>
-    <div class="photo-container" style="position:relative; height:{{ container_height }}px;">
+    <div class="photo-container" style="width:{{ containerW }}px; height:{{ containerH }}px;">
 ## for photo in photos
       <a href="{{ photo.src }}" class="photo-link" data-fancybox="gallery"
         style="position:absolute; top:{{ photo.top }}px; left:{{ photo.left }}px; width:{{ photo.width }}px; height:{{ photo.height }}px;">

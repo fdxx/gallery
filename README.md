@@ -4,7 +4,7 @@ Scan an image folder to generate static HTML pages.
 
 ## Usage
 ```bash
-Usage: ./gallery -src=dir -out=dir [-update=0] [-maxw=1800] [-maxh=500] [-assets=assets]
+Usage: ./gallery -src=dir -out=dir [-update=0] [-maxw=1800] [-maxh=500] [-assets=assets] [-webroot=/]
 ```
 
 - `-src`: Source folder for images. Symbolic links will be created in the output folder.
@@ -13,6 +13,7 @@ Usage: ./gallery -src=dir -out=dir [-update=0] [-maxw=1800] [-maxh=500] [-assets
 - `-maxw`: Maximum image width. Default is 1800
 - `-maxh`: Maximum image height. Default is 500
 - `-assets`: Website resource files, including CSS, website template files, etc. These will be copied to the website root directory when the site is generated. The default is `assets`, which is the runtime environment directory.
+- `-webroot`: The website's root directory; the default is `/`. This is particularly useful when the website is located in a subdirectory.
 
 ## Requirements
 - Linux
