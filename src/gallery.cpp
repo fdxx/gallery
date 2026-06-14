@@ -1,4 +1,5 @@
 #include <ImgSize.hpp>
+#include <cstdio>
 #include <inja.hpp>
 #include <JustifiedLayout.hpp>
 #include <ArgsParser.hpp>
@@ -19,6 +20,16 @@ static const char *ASSETSDIR = "assets";
 static const std::unordered_set<std::string> IMAGE_EXTS = {
     ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif"
 };
+
+template<typename... Args>
+static void Print(std::FILE *f, std::string_view fmt, Args&&... args)
+{
+    using namespace std::chrono;
+    zoned_time zt{current_zone(), floor<seconds>(system_clock::now())};
+    std::string msg = std::vformat(fmt, std::make_format_args(args...));
+    std::print(f, "{:%F %T} {}\n", zt, msg);
+    std::fflush(f);
+}
 
 class FileCounter
 {
@@ -56,7 +67,7 @@ private:
         DIR *dir = ::opendir(p.c_str());
         if (!dir)
         {
-            std::println(stderr, "Error: opendir failed: {}.", p.c_str());
+            Print(stderr, "Error: opendir failed: {}.", p.c_str());
             std::abort();
         }
 
@@ -118,13 +129,13 @@ public:
 
         if (!fs::is_directory(m_srcRoot))
         {
-            std::println(stderr, "Error: {} is not a directory.", m_srcRoot.c_str());
+            Print(stderr, "Error: {} is not a directory.", m_srcRoot.c_str());
             std::abort();
         }
 
         if (!fs::exists(m_albumTemplate) || !fs::exists(m_photoTemplate))
         {
-            std::println(stderr, "Error: HTML template does not exist.");
+            Print(stderr, "Error: HTML template does not exist.");
             std::abort();
         }
     }
@@ -141,7 +152,7 @@ public:
 
         DirNode rootNode = BuildTree(m_srcRoot);
         GenDir(rootNode);
-        std::println("[end] GenSite done.");
+        Print(stdout, "[end] GenSite done.");
     }
 
     const fs::path &GetSrcDir() const
@@ -159,7 +170,7 @@ private:
     {
         if (fs::exists(m_outRoot) && !fs::exists(m_sentinelFile))
         {
-            std::println(stderr, "Error: Output directory lacks sentinel — refusing to delete.");
+            Print(stderr, "Error: Output directory lacks sentinel — refusing to delete.");
             std::abort();
         }
         fs::remove_all(m_outRoot);
@@ -321,7 +332,7 @@ private:
         auto size = imgsize::from_file(path.c_str());
         if (!size)
         {
-            std::println(stderr, "Failed to get image info: {}", path.c_str());
+            Print(stderr, "Error: Failed to get image info: {}", path.c_str());
             return 0.0;
         }
 
@@ -357,7 +368,7 @@ int main(int argc, char* argv[])
     ArgsParser args(argc, argv);
     if (!args.Has("-src") || !args.Has("-out"))
     {
-        std::println("Usage: {} -src=dir -out=dir [-update=0] [-maxw=1800] [-maxh=500] [-assets=assets] [-webroot=/]", args.GetCmdName());
+        Print(stderr, "Usage: {} -src=dir -out=dir [-update=0] [-maxw=1800] [-maxh=500] [-assets=assets] [-webroot=/]", args.GetCmdName());
         return 1;
     }
 
@@ -379,7 +390,7 @@ int main(int argc, char* argv[])
     FileCounter fCounter(srcRoot);
     GalleryGenerator Gallery(srcRoot, LayoutCfg, outRoot, assets, webroot);
 
-    std::println("[start] photos={} output={} updateInterval={}(seconds)", srcRoot.c_str(), outRoot.c_str(), updateInterval);
+    Print(stdout, "[start] photos={} output={} updateInterval={}(seconds)", srcRoot.c_str(), outRoot.c_str(), updateInterval);
     
     if (updateInterval < 1)
     {
@@ -392,7 +403,7 @@ int main(int argc, char* argv[])
         size_t count = fCounter.GetLastCount();
         if (fCounter.IsChanged() || !fs::exists(Gallery.GetOutDir()))
         {
-            std::println("[update] fileCount changed: {} -> {}", count, fCounter.GetLastCount());
+            Print(stdout, "[update] fileCount changed: {} -> {}", count, fCounter.GetLastCount());
             Gallery.GenSite();
         }
 
