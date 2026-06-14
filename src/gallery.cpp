@@ -1,4 +1,3 @@
-#define STB_IMAGE_IMPLEMENTATION
 #include <ImgSize.hpp>
 #include <inja.hpp>
 #include <JustifiedLayout.hpp>
@@ -139,7 +138,7 @@ public:
         fs::create_symlink(m_srcRoot, m_srcLink);
         fs::copy(m_assets, m_outRoot, fs::copy_options::recursive);
         fs::remove_all(m_outRoot / "templates");
-        
+
         DirNode rootNode = BuildTree(m_srcRoot);
         GenDir(rootNode);
         std::println("[end] GenSite done.");
